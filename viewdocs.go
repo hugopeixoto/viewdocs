@@ -57,9 +57,16 @@ func pathPrefix() string {
 }
 
 func parseRequest(r *http.Request) (user, repo, ref, doc string) {
-	hostname := strings.Split(r.Host, ".")
-	user = getenv("GITHUB_USER", hostname[0])
+	baseHostname := getenv("HOSTNAME", "viewdocs.io")
 	path := strings.Split(r.RequestURI, "/")
+
+	if baseHostname == r.Host {
+		user = path[1]
+		path = path[1:]
+	} else {
+		hostname := strings.Split(r.Host, ".")
+		user = getenv("GITHUB_USER", hostname[0])
+	}
 
 	repoAndRef := strings.Split(path[1], "~")
 	repo = repoAndRef[0]
@@ -368,10 +375,10 @@ func getRepositoryConfig(lruCache *cache.LRUCache, user string, repo string, ref
 func handleRedirects(w http.ResponseWriter, r *http.Request, config map[string]interface{}, user string, repo string, ref string, doc string) bool {
 	redirectTo := ""
 	if r.RequestURI == "/" {
-		redirectTo = "http://progrium.viewdocs.io/viewdocs/"
+		redirectTo = "http://viewdocs.io/progrium/viewdocs/"
 	}
 	if strings.Contains(r.Host, "progrium") && strings.HasPrefix(r.RequestURI, "/dokku") {
-		redirectTo = "http://dokku.viewdocs.io" + r.RequestURI
+		redirectTo = "http://viewdocs.io/dokku" + r.RequestURI
 	}
 	if isAsset(doc) && !strings.Contains(r.Header.Get("Cache-Control"), "no-store") {
 		redirectTo = "https://cdn.jsdelivr.net/gh/" + user + "/" + repo + "@" + ref + "/docs/" + doc
@@ -422,7 +429,7 @@ func handleRedirects(w http.ResponseWriter, r *http.Request, config map[string]i
 
 func main() {
 	if getenv("ACCESS_TOKEN", "") == "" {
-		log.Fatal("ACCESS_TOKEN was not found. Read http://progrium.viewdocs.io/viewdocs/development/ for more info")
+		log.Fatal("ACCESS_TOKEN was not found. Read http://viewdocs.io/progrium/viewdocs/development/ for more info")
 	}
 
 	port := getenv("PORT", "8888")
